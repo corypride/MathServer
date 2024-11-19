@@ -2,10 +2,17 @@ package main
 
 import (
 	// "encoding/json"
+	"encoding/json"
+	"errors"
 	"fmt"
+	"strconv"
+
+	// "fmt"
 	"log"
 	"net/http"
-	"strconv"
+
+	// "strconv"
+	"unicode"
 	// "slices"
 )
 
@@ -15,15 +22,70 @@ type server struct {
 	router *http.ServeMux
 }
 
-type Equation struct {
+type RawEquation struct {
 	AValue string `json:"aValue"`
 }
+
+type ParsedEquation struct {
+	left int
+	right int
+	op operator
+
+}
+
+
+
+func (op operator) perform (a , b int) int{
+	switch op {
+	case ADD:
+		return a + b
+	case Del:
+		return a - b
+	case Mult:
+		return a * b
+	case Div:
+		return a / b
+	default:
+		return -1
+	}
+}
+func fromStringToOp(a string) (operator, error){
+	switch a {
+	case "+":
+		return ADD, nil
+	case "-":
+		return Del, nil
+	case "*":
+		return Mult, nil
+	case "/":
+		return Div, nil
+	default:
+		return -1, errors.New("Invalid operator")
+	}
+	
+}
+type operator int
+const ( 
+	ADD operator = iota
+	Del 
+	Mult	
+	Div 	
+)
 
 type Calculation struct {
 	Result string `json:"aValue"`
 }
 
-// Helper function to check if a slice contains a particular item
+
+func indexOf(slice []string, item string) int {
+	for i, v := range slice {
+		if v == item {
+			return i
+		}
+	}
+	return -1
+}
+
 func contains(slice []string, item string) bool {
 	for _, v := range slice {
 		if v == item {
@@ -33,58 +95,77 @@ func contains(slice []string, item string) bool {
 	return false
 }
 
-func includesOperatorAndNumbers(letter string) (int, int, string) {
+func includesOperatorAndNumbers(eq RawEquation) ParsedEquation {
 	operators := []string{"+", "-", "*", "/"}
-	var numbers []int
-	var operator string
+	var lft string
+	var rgt string
+	var strOp string
 
-	for _, char := range letter {
+
+	var isLeft bool = true
+
+	for _, char := range eq.AValue {
 		// see if char is an operator
 		if isOperator := contains(operators, string(char)); isOperator {
-			operator = string(char)
+			// op, err := fromString(string(char))
+			strOp = string(char)
+			isLeft = false
+
 		} else {
-			// cast char to int
-			if num, err := strconv.Atoi(string(char)); err == nil {
-				numbers = append(numbers, num)
+			// Check number
+			if unicode.IsNumber(char) && isLeft {
+				lft += string(char)
+			} else if unicode.IsNumber(char) && ! isLeft{
+				rgt += string(char)
 			}
 		}
 	}
+
+	if lft == "" || rgt == "" {
+		// return nil, errors.New("Invalid string")
+		fmt.Println("left or right side of equation is empty")
+	}
+
+	fmt.Println(lft)
+	fmt.Println(rgt)
+	fmt.Println(strOp)
+
+	var lInt, lErr = strconv.Atoi(lft)
+	var rInt, rErr = strconv.Atoi(rgt)
+	 convertedOp, opErr := fromStringToOp(strOp)
+
+	if lErr != nil {
+		fmt.Println("Left side ERROR")
+	}
+
+	if rErr != nil {
+		fmt.Println("Right side ERROR")
+	}
+
+	if opErr != nil {
+		fmt.Println("Operator ERROR")
+
+	}
+
+	pe := ParsedEquation{left: lInt ,right: rInt, op: convertedOp}
 	//TODO: run check here to see that numbers slice is length=2 for now but think in the 
 	// future that there may be more than 2 groups of numbers and more than one operator
-	return numbers[0], numbers[1], operator
+	return pe
 }
 
-
-func performCalculation(num1, num2 int, operator string) int {
-	switch operator {
-	case "+":
-		return num1 + num2
-	case "-":
-		return num1 - num2
-	case "*":
-		return num1 * num2
-	case "/":
-		if num2 == 0 {
-			log.Println("Error: Division by zero")
-			return 0
-		}
-		return num1 / num2
-	default:
-		log.Println("Error: Unsupported operator")
-		return 0
-	}
-}
 func main() {
-	// router := http.NewServeMux()
-	// srv := server{router: router}
+	
+	// test := RawEquation{AValue: "33*5"}
+	// fmt.Println("working now!!!")
+	// includesOperatorAndNumbers(test)
 
-	// srv.router.HandleFunc("GET /", handleIndex)
-	// srv.router.HandleFunc("POST /equation", handleEquation)
-	// http.ListenAndServe(":8080", srv.router)
+	router := http.NewServeMux()
+	srv := server{router: router}
 
-	str := "9/0"
-	num1, num2, op := includesOperatorAndNumbers(str)
-	fmt.Println(performCalculation(num1, num2, op))
+	srv.router.HandleFunc("GET /", handleIndex)
+	srv.router.HandleFunc("POST /equation", handleEquation)
+	http.ListenAndServe(":8080", srv.router)
+	
 	
 }
 
@@ -94,35 +175,33 @@ func main() {
 
 
 
-// func handleIndex(w http.ResponseWriter, r *http.Request) {
-// 	w.Write([]byte("Hello World"))
-// }
+func handleIndex(w http.ResponseWriter, r *http.Request) {
+	w.Write([]byte("Hello World"))
+}
 
-// func handleEquation(w http.ResponseWriter, r *http.Request) {
-// 	// w.Write([]byte ("Hello World"))
-// 	// need to check the qry string for the num value, if it is there, store it to a storage structure
+func handleEquation(w http.ResponseWriter, r *http.Request) {
+	// qryValues := r.URL.Query()["equation"]
+	var eq RawEquation
+	err := json.NewDecoder(r.Body).Decode(&eq)
 
-// 	// repeat the process, but this time checking for the operator. This will require storing a list of the possible operators to start with
-// 	// symbols := []string{"*","/", "+","-","({)",")"}
-// 	// qryValues := r.URL.Query()["equation"]
-// 	eq := Equation{}
+	if err != nil {
+		log.Fatal("Error decoding into struct")
+	}
+	defer r.Body.Close()
 
-// 	err := json.NewDecoder(r.Body).Decode(&eq)
-// 	// eq.printContents()
-// 	if err != nil {
-// 		log.Fatal("Error decoding into struct")
-// 	}
-// 	defer r.Body.Close()
-// 	log.Println("Equation recieved", int( eq.AValue[0]))
-// 	// Split the equation into numbers and operators
+	pe := includesOperatorAndNumbers(eq)
+	pe.op.perform(pe.left,pe.right)
+
+	log.Println("Equation recieved:", pe.op.perform(pe.left,pe.right))
+	// Split the equation into numbers and operators
 	
 
-// 	// if eq.AValue != "" {
-// 	// 	for char := range eq.AValue {
-// 	// 		fmt.Println(eq.AValue[char])
-// 	// 	}
-// 	// } else {
-// 	// 	fmt.Println("The value is not present!")
-// 	// }
+	// if eq.AValue != "" {
+	// 	for char := range eq.AValue {
+	// 		fmt.Println(eq.AValue[char])
+	// 	}
+	// } else {
+	// 	fmt.Println("The value is not present!")
+	// }
 
-// }
+}
