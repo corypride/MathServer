@@ -1,19 +1,13 @@
 package main
 
 import (
-	// "encoding/json"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"strconv"
-
-	// "fmt"
 	"log"
 	"net/http"
-
-	// "strconv"
 	"unicode"
-	// "slices"
 )
 
 // curl -X POST -d '{"aValue":"2+2"}' -│H "Content-Type: application/json" http://localhost:8080/equation
@@ -32,8 +26,6 @@ type ParsedEquation struct {
 	op operator
 
 }
-
-
 
 func (op operator) perform (a , b int) int{
 	switch op {
@@ -180,7 +172,6 @@ func handleIndex(w http.ResponseWriter, r *http.Request) {
 }
 
 func handleEquation(w http.ResponseWriter, r *http.Request) {
-	// qryValues := r.URL.Query()["equation"]
 	var eq RawEquation
 	err := json.NewDecoder(r.Body).Decode(&eq)
 
@@ -193,9 +184,9 @@ func handleEquation(w http.ResponseWriter, r *http.Request) {
 	pe.op.perform(pe.left,pe.right)
 
 	log.Println("Equation recieved:", pe.op.perform(pe.left,pe.right))
-	// Split the equation into numbers and operators
 	
-
+	// TODO: Put calculated values into equation struct then look to V2 to see how to attach it to the response
+	
 	// if eq.AValue != "" {
 	// 	for char := range eq.AValue {
 	// 		fmt.Println(eq.AValue[char])
