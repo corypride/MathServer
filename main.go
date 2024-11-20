@@ -26,6 +26,9 @@ type ParsedEquation struct {
 	op operator
 
 }
+type Calculation struct {
+	Result string `json:"aValue"`
+}
 
 func (op operator) perform (a , b int) int{
 	switch op {
@@ -64,9 +67,7 @@ const (
 	Div 	
 )
 
-type Calculation struct {
-	Result string `json:"aValue"`
-}
+
 
 
 func indexOf(slice []string, item string) int {
@@ -154,7 +155,7 @@ func main() {
 	router := http.NewServeMux()
 	srv := server{router: router}
 
-	srv.router.HandleFunc("GET /", handleIndex)
+	// srv.router.HandleFunc("GET /", handleIndex)
 	srv.router.HandleFunc("POST /equation", handleEquation)
 	http.ListenAndServe(":8080", srv.router)
 	
@@ -167,11 +168,11 @@ func main() {
 
 
 
-func handleIndex(w http.ResponseWriter, r *http.Request) {
-	w.Write([]byte("Hello World"))
-}
+// func handleIndex(w http.ResponseWriter, r *http.Request) error {
+// 	w.Write([]byte("Hello World"))
+// }
 
-func handleEquation(w http.ResponseWriter, r *http.Request) {
+func handleEquation(w http.ResponseWriter, r *http.Request)  {
 	var eq RawEquation
 	err := json.NewDecoder(r.Body).Decode(&eq)
 
@@ -183,16 +184,14 @@ func handleEquation(w http.ResponseWriter, r *http.Request) {
 	pe := includesOperatorAndNumbers(eq)
 	pe.op.perform(pe.left,pe.right)
 
-	log.Println("Equation recieved:", pe.op.perform(pe.left,pe.right))
+	returnedValue := Calculation{eq.AValue}
+	// log.Println("Equation recieved:", pe.op.perform(pe.left,pe.right))
+	jsonData, err := json.Marshal(returnedValue) 
+	if err != nil {{
+
+	}}
 	
-	// TODO: Put calculated values into equation struct then look to V2 to see how to attach it to the response
-	
-	// if eq.AValue != "" {
-	// 	for char := range eq.AValue {
-	// 		fmt.Println(eq.AValue[char])
-	// 	}
-	// } else {
-	// 	fmt.Println("The value is not present!")
-	// }
+	w.Write([]byte(jsonData))
+	// return
 
 }
