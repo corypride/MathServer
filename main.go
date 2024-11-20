@@ -4,9 +4,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"strconv"
 	"log"
 	"net/http"
+	"strconv"
 	"unicode"
 )
 
@@ -27,7 +27,7 @@ type ParsedEquation struct {
 
 }
 type Calculation struct {
-	Result string `json:"aValue"`
+	Result int `json:"result"`
 }
 
 func (op operator) perform (a , b int) int{
@@ -119,9 +119,9 @@ func includesOperatorAndNumbers(eq RawEquation) ParsedEquation {
 		fmt.Println("left or right side of equation is empty")
 	}
 
-	fmt.Println(lft)
-	fmt.Println(rgt)
-	fmt.Println(strOp)
+	// fmt.Println(lft)
+	// fmt.Println(rgt)
+	// fmt.Println(strOp)
 
 	var lInt, lErr = strconv.Atoi(lft)
 	var rInt, rErr = strconv.Atoi(rgt)
@@ -182,16 +182,16 @@ func handleEquation(w http.ResponseWriter, r *http.Request)  {
 	defer r.Body.Close()
 
 	pe := includesOperatorAndNumbers(eq)
-	pe.op.perform(pe.left,pe.right)
-
-	returnedValue := Calculation{eq.AValue}
+	returnedValue := Calculation{pe.op.perform(pe.left,pe.right)}
+	
 	// log.Println("Equation recieved:", pe.op.perform(pe.left,pe.right))
 	jsonData, err := json.Marshal(returnedValue) 
+	fmt.Println(string(jsonData))
 	if err != nil {{
 
 	}}
 	
-	w.Write([]byte(jsonData))
+	// w.Write([]byte(jsonData))
 	// return
 
 }
